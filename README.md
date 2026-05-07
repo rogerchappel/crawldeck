@@ -59,6 +59,8 @@ crawldeck profile list
 crawldeck inspect <profile>
 crawldeck job enqueue <profile>
 crawldeck job list
+crawldeck job next
+crawldeck job status <job-id>
 crawldeck job start <job-id>
 crawldeck job pause <job-id>
 crawldeck job resume <job-id>
