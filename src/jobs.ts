@@ -68,8 +68,18 @@ export async function startJob(jobId: string, cwd = process.cwd(), deckDir?: str
     }, cwd, deckDir);
     return completed;
   } catch (error) {
-    const failed = await setJobStatus(jobId, 'failed', cwd, deckDir);
-    failed.errors.push((error as Error).message);
+    const message = (error as Error).message;
+    const now = timestamp();
+    const { result: failed } = await mutateState((freshState) => {
+      const fresh = freshState.jobs.find((item) => item.id === jobId);
+      if (!fresh) throw new Error(`Job not found after adapter failure: ${jobId}`);
+      fresh.status = 'failed';
+      fresh.updatedAt = now;
+      fresh.completedAt = now;
+      fresh.errors = [...fresh.errors, message];
+      fresh.lastEvent = `failed: ${message}`;
+      return fresh;
+    }, cwd, deckDir);
     return failed;
   }
 }
