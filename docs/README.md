@@ -1,13 +1,8 @@
-# crawldeck Documentation
+# crawldeck docs
 
-This directory holds project documentation.
+- [PRD](PRD.md) — source idea and constraints.
+- [Tasks](TASKS.md) — V1 build checklist.
+- [Orchestration](ORCHESTRATION.md) — queue contract for humans and agents.
+- [orchestration.json](orchestration.json) — machine-readable command hints.
 
-## Contents
-
-- [Contributing guide](../CONTRIBUTING.md)
-- [Security policy](../SECURITY.md)
-- [Agent instructions](../AGENTS.md)
-
-## Additional docs
-
-For a hosted documentation site, see the `docs-site/` directory if present.
+crawldeck V1 is intentionally CLI-first. A menu bar UI can sit on top of the same local queue file later.
