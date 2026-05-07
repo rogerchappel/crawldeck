@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { inspect } from 'node:util';
 import { getAdapter, listAdapters } from './adapters.js';
-import { startJob, completeJob, enqueueJob, setJobStatus } from './jobs.js';
+import { startJob, completeJob, enqueueJob, getJob, nextQueuedJob, setJobStatus } from './jobs.js';
 import { createProfile, findProfile } from './profiles.js';
 import { renderHealth, renderJobs, renderProfiles, renderReport } from './reports.js';
 import { ensureDeckDir } from './paths.js';
@@ -18,6 +18,8 @@ Usage:
   crawldeck inspect <profile>
   crawldeck job enqueue <profile>
   crawldeck job list
+  crawldeck job next
+  crawldeck job status <job-id>
   crawldeck job start <job-id>
   crawldeck job pause <job-id>
   crawldeck job resume <job-id>
@@ -107,6 +109,18 @@ async function main(argv = process.argv.slice(2)): Promise<void> {
   if (command === 'job' && args[1] === 'list') {
     const state = await loadState(process.cwd(), parsed.deckDir);
     console.log(parsed.json ? JSON.stringify(state.jobs, null, 2) : renderJobs(state));
+    return;
+  }
+
+  if (command === 'job' && args[1] === 'next') {
+    const job = await nextQueuedJob(process.cwd(), parsed.deckDir);
+    console.log(job ? (parsed.json ? JSON.stringify(job, null, 2) : `${job.id} ${job.profileId} ${job.status}`) : 'No queued jobs');
+    return;
+  }
+
+  if (command === 'job' && args[1] === 'status') {
+    const job = await getJob(required(args[2], 'job status requires <job-id>'), process.cwd(), parsed.deckDir);
+    console.log(parsed.json ? JSON.stringify(job, null, 2) : `${job.id} ${job.status} ${job.processedItems}/${job.totalItems} ${job.lastEvent ?? ''}`);
     return;
   }
 
