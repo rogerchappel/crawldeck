@@ -1,0 +1,7 @@
+{
+  "items": [
+    { "url": "https://example.local/", "title": "Home", "status": 200, "body": "Welcome to the sample crawl." },
+    { "url": "https://example.local/docs", "title": "Docs", "status": 200, "body": "Fixture docs page." },
+    { "url": "https://example.local/missing", "title": "Missing", "status": 404, "body": "Not found fixture." }
+  ]
+}
