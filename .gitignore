@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.crawldeck/
+coverage/
+*.tgz
+.DS_Store
