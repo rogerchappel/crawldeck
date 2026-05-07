@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "stateFile": ".crawldeck/queue.json",
+  "defaultAdapter": "fixture",
+  "commands": {
+    "init": "crawldeck init",
+    "health": "crawldeck health",
+    "report": "crawldeck report",
+    "smoke": "npm run smoke"
+  },
+  "safety": {
+    "networkByDefault": false,
+    "telemetry": false,
+    "secretsRequired": false
+  }
+}
