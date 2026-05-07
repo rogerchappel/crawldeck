@@ -77,3 +77,7 @@ If verification cannot be run, explain why and provide the exact command maintai
 ## Maintainer Review
 
 Maintainers may request narrower scope, clearer verification, additional tests, or safer defaults before merging.
+
+## Adapter contributions
+
+Adapter PRs must include fixture-backed tests, clear network behavior docs, and a local smoke path. Do not add hidden telemetry, credential scraping, or default external crawling.
