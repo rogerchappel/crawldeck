@@ -56,3 +56,7 @@ Out of scope:
 ## Disclosure
 
 Coordinate disclosure with maintainers before publishing vulnerability details.
+
+## crawldeck-specific safety notes
+
+The built-in fixture adapter performs local file reads only. Please report any behavior that causes hidden network access, credential collection, telemetry, or writes outside the configured deck/output directories. Future network-capable adapters should be reviewed as explicit opt-in surfaces.
