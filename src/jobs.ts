@@ -77,3 +77,15 @@ export async function startJob(jobId: string, cwd = process.cwd(), deckDir?: str
 export async function completeJob(jobId: string, cwd = process.cwd(), deckDir?: string): Promise<CrawlJob> {
   return setJobStatus(jobId, 'completed', cwd, deckDir);
 }
+
+export async function nextQueuedJob(cwd = process.cwd(), deckDir?: string): Promise<CrawlJob | undefined> {
+  const state = await loadState(cwd, deckDir);
+  return state.jobs.find((job) => job.status === 'queued');
+}
+
+export async function getJob(jobId: string, cwd = process.cwd(), deckDir?: string): Promise<CrawlJob> {
+  const state = await loadState(cwd, deckDir);
+  const job = state.jobs.find((item) => item.id === jobId);
+  if (!job) throw new Error(`Job not found: ${jobId}`);
+  return job;
+}
