@@ -1,0 +1,6 @@
+{
+  "items": [
+    { "url": "https://healthy.local/", "title": "Healthy Home", "status": 200 },
+    { "url": "https://healthy.local/about", "title": "About", "status": 200 }
+  ]
+}
