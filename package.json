@@ -14,7 +14,8 @@
     "dist",
     "fixtures",
     "README.md",
-    "docs"
+    "docs",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
@@ -39,5 +40,13 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rogerchappel/crawldeck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rogerchappel/crawldeck/issues"
+  },
+  "homepage": "https://github.com/rogerchappel/crawldeck#readme"
 }
