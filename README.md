@@ -111,7 +111,20 @@ bash scripts/validate.sh
 - No hidden telemetry or analytics.
 - No credential scraping or secret storage.
 - No publishing or external crawling unless a future adapter explicitly implements it.
+## Release readiness
+
+Run the same checks expected before opening or cutting a release:
+
+```sh
+npm run check
+npm run test
+npm run build
+npm run smoke
+npm run package:smoke
+npm run release:check
+```
+
+Use `npm pack --dry-run` to confirm the published package contains the CLI/runtime files plus README, license, security, support, and release notes.
 
 ## License
-
 MIT
