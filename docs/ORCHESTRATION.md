@@ -8,6 +8,7 @@ crawldeck is designed so agents and humans can coordinate crawl work without hid
 - Generated reports: profile output directory, default `.crawldeck/out/<job-id>/`
 - No network calls are made by the built-in `fixture` adapter.
 - External crawler adapters must be explicit and should document their network behavior.
+- Non-fixture adapters require the review gate in `docs/ADAPTER_SAFETY.md`.
 
 ## Agent-safe loop
 
@@ -19,6 +20,8 @@ crawldeck job start <job-id>
 crawldeck health
 crawldeck report
 ```
+
+Review `SKILL.md` before handing CrawlDeck to another agent runner.
 
 ## Status meanings
 
