@@ -10,6 +10,9 @@ format and uses semantic versioning when versioned releases are published.
 ### Added
 
 - Initial project setup.
+- `SKILL.md` instructions for agent-safe CrawlDeck use.
+- Adapter safety policy for non-fixture crawler integrations.
+- Package allowlist coverage for skill, docs, and validation assets.
 
 ## Release Links
 

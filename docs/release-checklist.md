@@ -20,6 +20,7 @@ Confirm the package includes:
 - SUPPORT.md
 - RELEASE_NOTES.md or CHANGELOG.md
 - examples, fixtures, or docs required by the README
+- SKILL.md and adapter safety docs for agent workflows
 
 ## Public Readiness
 
