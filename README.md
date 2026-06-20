@@ -93,6 +93,7 @@ adapterSeam('my-crawler', () => ({
 ```
 
 Real adapters should be explicit about network access, robots.txt behavior, rate limits, and credential use.
+See [`docs/ADAPTER_SAFETY.md`](docs/ADAPTER_SAFETY.md) for the approval checklist agents should follow before enabling a non-fixture adapter.
 
 ## Verification
 
@@ -111,6 +112,7 @@ bash scripts/validate.sh
 - No hidden telemetry or analytics.
 - No credential scraping or secret storage.
 - No publishing or external crawling unless a future adapter explicitly implements it.
+- Agents should request approval before running any non-fixture adapter.
 ## Release readiness
 
 Run the same checks expected before opening or cutting a release:
