@@ -29,7 +29,8 @@
     "test": "npm run build && node --test tests/*.test.mjs",
     "smoke": "npm run build && bash scripts/smoke.sh",
     "package:smoke": "npm run build && node scripts/package-smoke.mjs",
-    "release:check": "npm run check && npm test && npm run smoke && npm run package:smoke"
+    "release:check": "npm run check && npm test && npm run smoke && npm run package:smoke",
+    "lint": "npm run check"
   },
   "keywords": [
     "crawler",
