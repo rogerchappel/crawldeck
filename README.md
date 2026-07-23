@@ -69,6 +69,12 @@ crawldeck health
 crawldeck report [--json]
 ```
 
+Job commands follow the transition policy in
+[`docs/STATE_SCHEMA.md`](docs/STATE_SCHEMA.md#job-status-transitions). In
+particular, `completed` and `failed` jobs are terminal: create a new job with
+`job enqueue` instead of trying to pause, resume, start, or complete one again.
+Invalid commands exit nonzero and leave the queue unchanged.
+
 ## Local state
 
 By default crawldeck writes only under:
