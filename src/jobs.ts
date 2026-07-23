@@ -3,7 +3,26 @@ import { getAdapter } from './adapters.js';
 import { nextId, timestamp } from './id.js';
 import { findProfile } from './profiles.js';
 import { loadState, mutateState } from './state.js';
-import type { CrawlJob, CrawlJobStatus } from './types.js';
+import type { CrawlJob, CrawlJobStatus, CrawlRunResult } from './types.js';
+
+const JOB_STATUS_TRANSITIONS: Readonly<Record<CrawlJobStatus, readonly CrawlJobStatus[]>> = {
+  queued: ['running', 'paused', 'completed'],
+  running: ['paused', 'completed', 'failed'],
+  paused: ['queued', 'running', 'completed'],
+  completed: [],
+  failed: []
+};
+
+function applyJobStatus(job: CrawlJob, status: CrawlJobStatus, now: string, lastEvent: string = status): void {
+  if (!JOB_STATUS_TRANSITIONS[job.status].includes(status)) {
+    throw new Error(`Job ${job.id} cannot transition from ${job.status} to ${status}`);
+  }
+  job.status = status;
+  job.updatedAt = now;
+  if (status === 'running') job.startedAt ??= now;
+  if (status === 'completed' || status === 'failed') job.completedAt = now;
+  job.lastEvent = lastEvent;
+}
 
 export async function enqueueJob(profileIdOrName: string, cwd = process.cwd(), deckDir?: string): Promise<CrawlJob> {
   const now = timestamp();
@@ -33,11 +52,7 @@ export async function setJobStatus(jobId: string, status: CrawlJobStatus, cwd = 
   const { result } = await mutateState((state) => {
     const job = state.jobs.find((item) => item.id === jobId);
     if (!job) throw new Error(`Job not found: ${jobId}`);
-    job.status = status;
-    job.updatedAt = now;
-    if (status === 'running') job.startedAt ??= now;
-    if (status === 'completed' || status === 'failed') job.completedAt = now;
-    job.lastEvent = status;
+    applyJobStatus(job, status, now);
     return job;
   }, cwd, deckDir);
   return result;
@@ -51,37 +66,37 @@ export async function startJob(jobId: string, cwd = process.cwd(), deckDir?: str
   const profile = findProfile(state.profiles, job.profileId);
   await setJobStatus(jobId, 'running', cwd, deckDir);
   const adapter = getAdapter(profile.adapter);
+  let adapterResult: CrawlRunResult;
   try {
-    const result = await adapter.run(profile, job);
-    const now = timestamp();
-    const { result: completed } = await mutateState((freshState) => {
-      const fresh = freshState.jobs.find((item) => item.id === jobId);
-      if (!fresh) throw new Error(`Job not found after run: ${jobId}`);
-      fresh.status = result.errors.length > 0 ? 'failed' : 'completed';
-      fresh.updatedAt = now;
-      fresh.completedAt = now;
-      fresh.totalItems = result.totalItems;
-      fresh.processedItems = result.processedItems;
-      fresh.errors = result.errors;
-      fresh.lastEvent = result.errors.length > 0 ? `failed: ${result.errors.length} errors` : `completed: ${result.reportPath}`;
-      return fresh;
-    }, cwd, deckDir);
-    return completed;
+    adapterResult = await adapter.run(profile, job);
   } catch (error) {
     const message = (error as Error).message;
     const now = timestamp();
     const { result: failed } = await mutateState((freshState) => {
       const fresh = freshState.jobs.find((item) => item.id === jobId);
       if (!fresh) throw new Error(`Job not found after adapter failure: ${jobId}`);
-      fresh.status = 'failed';
-      fresh.updatedAt = now;
-      fresh.completedAt = now;
+      applyJobStatus(fresh, 'failed', now, `failed: ${message}`);
       fresh.errors = [...fresh.errors, message];
-      fresh.lastEvent = `failed: ${message}`;
       return fresh;
     }, cwd, deckDir);
     return failed;
   }
+
+  const now = timestamp();
+  const { result: completed } = await mutateState((freshState) => {
+    const fresh = freshState.jobs.find((item) => item.id === jobId);
+    if (!fresh) throw new Error(`Job not found after run: ${jobId}`);
+    const status = adapterResult.errors.length > 0 ? 'failed' : 'completed';
+    const lastEvent = adapterResult.errors.length > 0
+      ? `failed: ${adapterResult.errors.length} errors`
+      : `completed: ${adapterResult.reportPath}`;
+    applyJobStatus(fresh, status, now, lastEvent);
+    fresh.totalItems = adapterResult.totalItems;
+    fresh.processedItems = adapterResult.processedItems;
+    fresh.errors = adapterResult.errors;
+    return fresh;
+  }, cwd, deckDir);
+  return completed;
 }
 
 export async function completeJob(jobId: string, cwd = process.cwd(), deckDir?: string): Promise<CrawlJob> {
