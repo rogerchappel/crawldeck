@@ -3,7 +3,9 @@
 The V1 adapter contract is intentionally small:
 
 - `inspect(profile)` returns crawlable items without mutating queue state.
-- `run(profile, job)` performs work and writes any report artifacts.
+- `run(profile, job)` performs work and writes any report artifacts. The job is the
+  freshly persisted `running` snapshot, including its `startedAt`, updated
+  `updatedAt`, and current counters and error fields.
 - Adapters return progress counters and error strings to the queue.
 
 ## Built-in fixture adapter

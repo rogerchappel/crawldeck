@@ -64,11 +64,11 @@ export async function startJob(jobId: string, cwd = process.cwd(), deckDir?: str
   if (!job) throw new Error(`Job not found: ${jobId}`);
   if (job.status !== 'queued' && job.status !== 'paused') throw new Error(`Job ${job.id} cannot start from ${job.status}`);
   const profile = findProfile(state.profiles, job.profileId);
-  await setJobStatus(jobId, 'running', cwd, deckDir);
+  const running = await setJobStatus(jobId, 'running', cwd, deckDir);
   const adapter = getAdapter(profile.adapter);
   let adapterResult: CrawlRunResult;
   try {
-    adapterResult = await adapter.run(profile, job);
+    adapterResult = await adapter.run(profile, running);
   } catch (error) {
     const message = (error as Error).message;
     const now = timestamp();
