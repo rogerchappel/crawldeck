@@ -27,6 +27,7 @@ Usage:
   crawldeck health
   crawldeck report [--json]
 
+Global options --deck-dir <dir> and --json may appear before or after a command.
 All state lives in ./.crawldeck/queue.json unless --deck-dir <dir> is supplied.`;
 }
 
@@ -36,18 +37,74 @@ function option(args: string[], name: string): string | undefined {
 }
 
 function withoutGlobalOptions(args: string[]): { args: string[]; deckDir?: string; json: boolean } {
-  const copy = [...args];
-  const deckDir = option(copy, '--deck-dir');
-  const deckIndex = copy.indexOf('--deck-dir');
-  if (deckIndex >= 0) copy.splice(deckIndex, 2);
-  const json = copy.includes('--json');
-  return { args: copy.filter((arg) => arg !== '--json'), deckDir, json };
+  const remaining: string[] = [];
+  let deckDir: string | undefined;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    if (arg === '--deck-dir') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) throw new Error('--deck-dir requires a directory value');
+      deckDir = value;
+      index += 1;
+      continue;
+    }
+    remaining.push(arg);
+  }
+
+  return { args: remaining, deckDir, json };
+}
+
+function validateArguments(args: string[]): void {
+  const command = args[0];
+  const exact = (usage: string, count: number): void => {
+    if (args.length === count) return;
+    const unexpected = args.slice(count);
+    if (unexpected.length > 0) throw new Error(`${usage} does not accept: ${unexpected.join(' ')}`);
+    throw new Error(`${usage} requires ${usage.includes('<') ? usage.slice(usage.indexOf('<')) : 'more arguments'}`);
+  };
+
+  if (!command || command === '--help' || command === '-h' || command === '--version' || command === '-v') {
+    exact(command ?? 'crawldeck', command ? 1 : 0);
+  } else if (['init', 'adapters', 'health', 'report'].includes(command)) {
+    exact(command, 1);
+  } else if (command === 'inspect') {
+    exact('inspect <profile>', 2);
+  } else if (command === 'profile' && args[1] === 'list') {
+    exact('profile list', 2);
+  } else if (command === 'profile' && args[1] === 'add') {
+    validateProfileAdd(args);
+  } else if (command === 'job' && ['list', 'next'].includes(args[1] ?? '')) {
+    exact(`job ${args[1]}`, 2);
+  } else if (command === 'job' && ['enqueue', 'status', 'start', 'pause', 'resume', 'complete'].includes(args[1] ?? '')) {
+    exact(`job ${args[1]} <${args[1] === 'enqueue' ? 'profile' : 'job-id'}>`, 3);
+  }
+}
+
+function validateProfileAdd(args: string[]): void {
+  if (!args[2] || args[2].startsWith('--')) throw new Error('profile add requires <name>');
+  const seen = new Set<string>();
+  for (let index = 3; index < args.length; index += 2) {
+    const flag = args[index];
+    if (flag !== '--fixture' && flag !== '--out') throw new Error(`profile add does not accept: ${flag}`);
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) throw new Error(`${flag} requires a value`);
+    if (seen.has(flag)) throw new Error(`profile add does not accept duplicate ${flag}`);
+    seen.add(flag);
+  }
+  if (!seen.has('--fixture')) throw new Error('profile add requires --fixture <path>');
 }
 
 async function main(argv = process.argv.slice(2)): Promise<void> {
   const parsed = withoutGlobalOptions(argv);
   const args = parsed.args;
   const command = args[0];
+  validateArguments(args);
 
   if (!command || command === '--help' || command === '-h') {
     console.log(help());
