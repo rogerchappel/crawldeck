@@ -10,16 +10,24 @@ async function readFixtureItems(profile: CrawlProfile): Promise<CrawlItem[]> {
   const fixtureRoot = resolveFixture(profile);
   const manifestPath = path.join(fixtureRoot, 'manifest.json');
   const raw = await readFile(manifestPath, 'utf8');
-  const parsed = JSON.parse(raw) as { items?: CrawlItem[] };
+  const parsed = JSON.parse(raw) as { items?: Array<Partial<CrawlItem> & { status?: unknown }> };
   if (!Array.isArray(parsed.items)) {
     throw new Error(`Fixture manifest must contain an items array: ${manifestPath}`);
   }
-  return parsed.items.map((item, index) => ({
-    url: String(item.url ?? `fixture://${index}`),
-    title: String(item.title ?? `Untitled ${index + 1}`),
-    status: Number(item.status ?? 200),
-    body: item.body ? String(item.body) : undefined
-  }));
+  return parsed.items.map((item, index) => {
+    const status = item.status ?? 200;
+    if (typeof status !== 'number' || !Number.isInteger(status) || status < 100 || status > 599) {
+      throw new Error(
+        `Fixture manifest item ${index + 1} has invalid status; expected an integer from 100 to 599: ${manifestPath}`
+      );
+    }
+    return {
+      url: String(item.url ?? `fixture://${index}`),
+      title: String(item.title ?? `Untitled ${index + 1}`),
+      status,
+      body: item.body ? String(item.body) : undefined
+    };
+  });
 }
 
 export const fixtureAdapter: CrawlAdapter = {
