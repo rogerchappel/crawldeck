@@ -20,7 +20,11 @@ The fixture adapter reads `<fixture>/manifest.json`:
 }
 ```
 
-Statuses `>= 400` are treated as item errors. This lets tests exercise failure handling without making network calls.
+Each optional `status` must be a JSON number containing an integer from `100`
+through `599`; omitted statuses default to `200`. Strings, fractional or
+non-finite numbers, and values outside that range invalidate the manifest.
+Statuses `>= 400` are treated as item errors. This lets tests exercise failure
+handling without making network calls.
 
 ## Future real adapters
 
