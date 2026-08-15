@@ -10,11 +10,14 @@ async function readFixtureItems(profile: CrawlProfile): Promise<CrawlItem[]> {
   const fixtureRoot = resolveFixture(profile);
   const manifestPath = path.join(fixtureRoot, 'manifest.json');
   const raw = await readFile(manifestPath, 'utf8');
-  const parsed = JSON.parse(raw) as { items?: Array<Partial<CrawlItem> & { status?: unknown }> };
-  if (!Array.isArray(parsed.items)) {
+  const parsed: unknown = JSON.parse(raw);
+  if (!isObject(parsed) || !Array.isArray(parsed.items)) {
     throw new Error(`Fixture manifest must contain an items array: ${manifestPath}`);
   }
   return parsed.items.map((item, index) => {
+    if (!isObject(item)) {
+      throw new Error(`Fixture manifest item ${index + 1} must be an object: ${manifestPath}`);
+    }
     const status = item.status ?? 200;
     if (typeof status !== 'number' || !Number.isInteger(status) || status < 100 || status > 599) {
       throw new Error(
@@ -28,6 +31,10 @@ async function readFixtureItems(profile: CrawlProfile): Promise<CrawlItem[]> {
       body: item.body ? String(item.body) : undefined
     };
   });
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export const fixtureAdapter: CrawlAdapter = {
