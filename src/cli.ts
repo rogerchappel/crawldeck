@@ -189,19 +189,19 @@ async function main(argv = process.argv.slice(2)): Promise<void> {
 
   if (command === 'job' && args[1] === 'pause') {
     const job = await setJobStatus(required(args[2], 'job pause requires <job-id>'), 'paused', process.cwd(), parsed.deckDir);
-    console.log(`${job.id} paused`);
+    console.log(parsed.json ? JSON.stringify(job, null, 2) : `${job.id} paused`);
     return;
   }
 
   if (command === 'job' && args[1] === 'resume') {
     const job = await setJobStatus(required(args[2], 'job resume requires <job-id>'), 'queued', process.cwd(), parsed.deckDir);
-    console.log(`${job.id} queued`);
+    console.log(parsed.json ? JSON.stringify(job, null, 2) : `${job.id} queued`);
     return;
   }
 
   if (command === 'job' && args[1] === 'complete') {
     const job = await completeJob(required(args[2], 'job complete requires <job-id>'), process.cwd(), parsed.deckDir);
-    console.log(`${job.id} completed`);
+    console.log(parsed.json ? JSON.stringify(job, null, 2) : `${job.id} completed`);
     return;
   }
 
