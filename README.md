@@ -83,8 +83,9 @@ By default crawldeck writes only under:
 - `.crawldeck/out/<job-id>/...`
 
 Global options may appear before or after a command. Use `--deck-dir <dir>` to
-put the queue somewhere else, and `--json` to request JSON from commands that
-support structured output.
+put the queue somewhere else. Use `--json` to request structured JSON from any
+command that returns profiles, jobs, inspected items, health, or reports;
+state-mutating job commands return the updated job object.
 
 ## Adapter seam
 

@@ -20,8 +20,8 @@ async function createQueuedJob() {
   return { cwd, job };
 }
 
-async function runJobCommand(cwd, command, jobId) {
-  return execFileAsync(process.execPath, [cliPath, 'job', command, jobId], { cwd });
+async function runJobCommand(cwd, command, jobId, ...options) {
+  return execFileAsync(process.execPath, [cliPath, 'job', command, jobId, ...options], { cwd });
 }
 
 const allowedCommands = [
@@ -41,6 +41,28 @@ for (const [command, initialStatus, expectedStatus] of allowedCommands) {
 
     assert.equal(stderr, '');
     assert.equal(persisted.status, expectedStatus);
+  });
+}
+
+for (const [command, initialStatus, expectedStatus, expectedText] of [
+  ['pause', 'queued', 'paused', 'paused'],
+  ['resume', 'paused', 'queued', 'queued'],
+  ['complete', 'queued', 'completed', 'completed']
+]) {
+  test(`job ${command} preserves text output and supports global JSON output`, async () => {
+    const textSetup = await createQueuedJob();
+    if (initialStatus === 'paused') await setJobStatus(textSetup.job.id, 'paused', textSetup.cwd);
+    const textResult = await runJobCommand(textSetup.cwd, command, textSetup.job.id);
+    assert.equal(textResult.stdout, `${textSetup.job.id} ${expectedText}\n`);
+    assert.equal(textResult.stderr, '');
+
+    const jsonSetup = await createQueuedJob();
+    if (initialStatus === 'paused') await setJobStatus(jsonSetup.job.id, 'paused', jsonSetup.cwd);
+    const jsonResult = await runJobCommand(jsonSetup.cwd, command, jsonSetup.job.id, '--json');
+    assert.equal(jsonResult.stderr, '');
+    const rendered = JSON.parse(jsonResult.stdout);
+    assert.equal(rendered.status, expectedStatus);
+    assert.deepEqual(rendered, (await loadState(jsonSetup.cwd)).jobs[0]);
   });
 }
 

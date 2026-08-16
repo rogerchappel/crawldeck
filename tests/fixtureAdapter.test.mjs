@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createProfile, enqueueJob, fixtureAdapter, startJob, loadState } from '../dist/index.js';
@@ -57,5 +57,29 @@ for (const [label, status, manifest] of [
 
     const state = await loadState(cwd);
     assert.deepEqual(state.jobs[0], failed);
+  });
+}
+
+for (const [label, item] of [
+  ['null', null],
+  ['array', []],
+  ['string', 'bad'],
+  ['number', 42]
+]) {
+  test(`fixture adapter rejects ${label} manifest item during inspect and job start`, async () => {
+    const { cwd, profile } = await profileForItems([item]);
+    const manifestPath = path.join(profile.fixturePath, 'manifest.json');
+    const expectedMessage = `Fixture manifest item 1 must be an object: ${manifestPath}`;
+
+    await assert.rejects(() => fixtureAdapter.inspect(profile), { message: expectedMessage });
+
+    const queued = await enqueueJob(profile.id, cwd);
+    const failed = await startJob(queued.id, cwd);
+    assert.equal(failed.status, 'failed');
+    assert.equal(failed.totalItems, 0);
+    assert.equal(failed.processedItems, 0);
+    assert.deepEqual(failed.errors, [expectedMessage]);
+    assert.equal(failed.lastEvent, `failed: ${expectedMessage}`);
+    await assert.rejects(access(path.join(failed.outputDir, `${failed.id}-report.json`)), { code: 'ENOENT' });
   });
 }
