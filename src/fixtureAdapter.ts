@@ -18,6 +18,21 @@ async function readFixtureItems(profile: CrawlProfile): Promise<CrawlItem[]> {
     if (!isObject(item)) {
       throw new Error(`Fixture manifest item ${index + 1} must be an object: ${manifestPath}`);
     }
+    if (typeof item.url !== 'string' || item.url.trim().length === 0) {
+      throw new Error(
+        `Fixture manifest item ${index + 1} has invalid url; expected a non-empty string: ${manifestPath}`
+      );
+    }
+    if (item.title !== undefined && typeof item.title !== 'string') {
+      throw new Error(
+        `Fixture manifest item ${index + 1} has invalid title; expected a string when supplied: ${manifestPath}`
+      );
+    }
+    if (item.body !== undefined && typeof item.body !== 'string') {
+      throw new Error(
+        `Fixture manifest item ${index + 1} has invalid body; expected a string when supplied: ${manifestPath}`
+      );
+    }
     const status = item.status ?? 200;
     if (typeof status !== 'number' || !Number.isInteger(status) || status < 100 || status > 599) {
       throw new Error(
@@ -25,10 +40,10 @@ async function readFixtureItems(profile: CrawlProfile): Promise<CrawlItem[]> {
       );
     }
     return {
-      url: String(item.url ?? `fixture://${index}`),
-      title: String(item.title ?? `Untitled ${index + 1}`),
+      url: item.url,
+      title: item.title ?? `Untitled ${index + 1}`,
       status,
-      body: item.body ? String(item.body) : undefined
+      body: item.body
     };
   });
 }
