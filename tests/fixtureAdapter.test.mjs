@@ -29,7 +29,10 @@ test('fixture adapter inspects and runs local crawl items', async () => {
 });
 
 test('fixture adapter accepts boundary HTTP statuses', async () => {
-  const { profile } = await profileForItems([{ status: 100 }, { status: 599 }]);
+  const { profile } = await profileForItems([
+    { url: 'https://example.test/continue', status: 100 },
+    { url: 'https://example.test/error', status: 599 }
+  ]);
   const items = await fixtureAdapter.inspect(profile);
   assert.deepEqual(items.map((item) => item.status), [100, 599]);
 });
@@ -59,6 +62,40 @@ for (const [label, status, manifest] of [
     assert.deepEqual(state.jobs[0], failed);
   });
 }
+
+for (const [label, item, field, expectation] of [
+  ['missing URL', {}, 'url', 'a non-empty string'],
+  ['object URL', { url: {} }, 'url', 'a non-empty string'],
+  ['empty URL', { url: '  ' }, 'url', 'a non-empty string'],
+  ['array title', { url: 'https://example.test/', title: [] }, 'title', 'a string when supplied'],
+  ['numeric body', { url: 'https://example.test/', body: 42 }, 'body', 'a string when supplied']
+]) {
+  test(`fixture adapter rejects ${label} during inspect and before job output`, async () => {
+    const { cwd, profile } = await profileForItems([item]);
+    const manifestPath = path.join(profile.fixturePath, 'manifest.json');
+    const expectedMessage = `Fixture manifest item 1 has invalid ${field}; expected ${expectation}: ${manifestPath}`;
+
+    await assert.rejects(() => fixtureAdapter.inspect(profile), { message: expectedMessage });
+
+    const queued = await enqueueJob(profile.id, cwd);
+    const failed = await startJob(queued.id, cwd);
+    assert.equal(failed.status, 'failed');
+    assert.equal(failed.totalItems, 0);
+    assert.equal(failed.processedItems, 0);
+    assert.deepEqual(failed.errors, [expectedMessage]);
+    await assert.rejects(access(path.join(failed.outputDir, `${failed.id}-report.json`)), { code: 'ENOENT' });
+  });
+}
+
+test('fixture adapter retains documented defaults for omitted optional fields', async () => {
+  const { profile } = await profileForItems([{ url: 'https://example.test/', body: '' }]);
+  assert.deepEqual(await fixtureAdapter.inspect(profile), [{
+    url: 'https://example.test/',
+    title: 'Untitled 1',
+    status: 200,
+    body: ''
+  }]);
+});
 
 for (const [label, item] of [
   ['null', null],
