@@ -20,9 +20,13 @@ The fixture adapter reads `<fixture>/manifest.json`:
 }
 ```
 
-Each optional `status` must be a JSON number containing an integer from `100`
-through `599`; omitted statuses default to `200`. Strings, fractional or
+Every item must be an object with a `url` that is a non-empty JSON string.
+Optional `title` and `body` values must be strings when supplied; an omitted
+title defaults to `Untitled N`, while an omitted body remains absent. Each
+optional `status` must be a JSON number containing an integer from `100`
+through `599`; an omitted status defaults to `200`. Strings, fractional or
 non-finite numbers, and values outside that range invalidate the manifest.
+Validation errors identify the one-based item number and manifest path.
 Statuses `>= 400` are treated as item errors. This lets tests exercise failure
 handling without making network calls.
 
