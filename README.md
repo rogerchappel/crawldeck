@@ -48,6 +48,8 @@ crawldeck report
 ```
 
 The sample fixture includes a 404 on purpose, so the started job demonstrates failure reporting.
+Fixture manifest item URLs must be absolute `http:` or `https:` URLs; malformed,
+relative, and other-scheme URLs are rejected during inspection and job start.
 
 ## Commands
 
