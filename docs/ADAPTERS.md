@@ -20,7 +20,9 @@ The fixture adapter reads `<fixture>/manifest.json`:
 }
 ```
 
-Every item must be an object with a `url` that is a non-empty JSON string.
+Every item must be an object with a `url` that is an absolute HTTP or HTTPS URL.
+Relative URLs, malformed URLs, and other schemes are rejected before a job writes
+its report.
 Optional `title` and `body` values must be strings when supplied; an omitted
 title defaults to `Untitled N`, while an omitted body remains absent. Each
 optional `status` must be a JSON number containing an integer from `100`

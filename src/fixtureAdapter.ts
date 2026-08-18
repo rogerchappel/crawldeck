@@ -23,6 +23,19 @@ async function readFixtureItems(profile: CrawlProfile): Promise<CrawlItem[]> {
         `Fixture manifest item ${index + 1} has invalid url; expected a non-empty string: ${manifestPath}`
       );
     }
+    let fixtureUrl: URL;
+    try {
+      fixtureUrl = new URL(item.url);
+    } catch {
+      throw new Error(
+        `Fixture manifest item ${index + 1} has invalid url; expected an absolute HTTP or HTTPS URL: ${manifestPath}`
+      );
+    }
+    if (fixtureUrl.protocol !== 'http:' && fixtureUrl.protocol !== 'https:') {
+      throw new Error(
+        `Fixture manifest item ${index + 1} has invalid url; expected an absolute HTTP or HTTPS URL: ${manifestPath}`
+      );
+    }
     if (item.title !== undefined && typeof item.title !== 'string') {
       throw new Error(
         `Fixture manifest item ${index + 1} has invalid title; expected a string when supplied: ${manifestPath}`

@@ -37,6 +37,40 @@ test('fixture adapter accepts boundary HTTP statuses', async () => {
   assert.deepEqual(items.map((item) => item.status), [100, 599]);
 });
 
+test('fixture adapter accepts absolute HTTP and HTTPS URLs', async () => {
+  const { profile } = await profileForItems([
+    { url: 'http://example.test/plain' },
+    { url: 'https://example.test/secure' }
+  ]);
+  assert.deepEqual((await fixtureAdapter.inspect(profile)).map((item) => item.url), [
+    'http://example.test/plain',
+    'https://example.test/secure'
+  ]);
+});
+
+for (const [label, url] of [
+  ['malformed', 'definitely not a URL'],
+  ['relative', '/relative/path'],
+  ['unsupported scheme', 'file:///tmp/page.html']
+]) {
+  test(`fixture adapter rejects ${label} URL during inspect and before job output`, async () => {
+    const { cwd, profile } = await profileForItems([{ url }]);
+    const manifestPath = path.join(profile.fixturePath, 'manifest.json');
+    const expectedMessage = `Fixture manifest item 1 has invalid url; expected an absolute HTTP or HTTPS URL: ${manifestPath}`;
+
+    await assert.rejects(() => fixtureAdapter.inspect(profile), { message: expectedMessage });
+
+    const queued = await enqueueJob(profile.id, cwd);
+    const failed = await startJob(queued.id, cwd);
+    assert.equal(failed.status, 'failed');
+    assert.equal(failed.totalItems, 0);
+    assert.equal(failed.processedItems, 0);
+    assert.deepEqual(failed.errors, [expectedMessage]);
+    assert.equal(failed.lastEvent, `failed: ${expectedMessage}`);
+    await assert.rejects(access(path.join(failed.outputDir, `${failed.id}-report.json`)), { code: 'ENOENT' });
+  });
+}
+
 for (const [label, status, manifest] of [
   ['string', '200'],
   ['non-finite', undefined, '{"items":[{"url":"https://example.test/bad","status":1e400}]}'],
