@@ -6,6 +6,7 @@ Use this checklist before publishing crawldeck.
 
 - Run `npm install` from a clean checkout.
 - Run `npm run release:check` when available.
+- Confirm the release tag is exactly `v<package.json version>`; for version 0.1.0, run `npm run release:tag -- v0.1.0`.
 - Run `npm pack --dry-run` and inspect the file list.
 - Run the documented CLI smoke command from the README.
 
