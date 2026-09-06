@@ -1,6 +1,8 @@
 # State schema
 
 crawldeck stores one local JSON document by default at `.crawldeck/queue.json`.
+The document uses schema version `1`; other versions are not silently upgraded
+or downgraded.
 
 ```json
 {
@@ -17,6 +19,8 @@ crawldeck stores one local JSON document by default at `.crawldeck/queue.json`.
 - `adapter`: adapter key, `fixture` in V1.
 - `fixturePath`: absolute path to a fixture directory with `manifest.json`.
 - `outputDir`: absolute directory for job reports.
+- `createdAt` / `updatedAt`: timestamp strings.
+- `notes`: optional string.
 
 ## Job fields
 
@@ -26,6 +30,19 @@ crawldeck stores one local JSON document by default at `.crawldeck/queue.json`.
 - `totalItems` / `processedItems`: adapter progress counters.
 - `errors`: adapter or item-level error strings.
 - `lastEvent`: short human-readable status note.
+- `createdAt` / `updatedAt`: timestamp strings.
+- `startedAt` / `completedAt`: optional timestamp strings.
+- `outputDir`: report output directory string.
+
+## Loading and compatibility
+
+When loading an existing queue, crawldeck validates the JSON root, schema
+version, profile and job arrays, every required string, optional string,
+non-negative integer progress counter, recognized job status, and each string
+in `errors`. Invalid JSON or an incompatible field produces an error naming
+`.crawldeck/queue.json` and the invalid field. Crawldeck does not replace,
+truncate, or otherwise rewrite a queue that fails validation; correct or
+restore that file before running another state-mutating command.
 
 ## Job status transitions
 

@@ -88,6 +88,10 @@ Global options may appear before or after a command. Use `--deck-dir <dir>` to
 put the queue somewhere else. Use `--json` to request structured JSON from any
 command that returns profiles, jobs, inspected items, health, or reports;
 state-mutating job commands return the updated job object.
+Existing queues are validated against the version 1 state schema before use.
+Malformed or unsupported state is rejected with the queue path and invalid
+field, and the file is left unchanged. See
+[`docs/STATE_SCHEMA.md`](docs/STATE_SCHEMA.md#loading-and-compatibility).
 
 ## Adapter seam
 
