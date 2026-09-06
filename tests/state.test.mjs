@@ -83,6 +83,21 @@ test('rejects malformed persisted state with stable field diagnostics and preser
   }
 });
 
+test('CLI reports malformed state without incidental JavaScript diagnostics', async () => {
+  const cwd = await mkdtemp(path.join(tmpdir(), 'crawldeck-invalid-state-cli-'));
+  const { statePath, raw } = await writeState(cwd, { version: 1, profiles: [null], jobs: [] });
+  const cliPath = path.resolve('dist/cli.js');
+  await assert.rejects(
+    execFileAsync(process.execPath, [cliPath, 'profile', 'list'], { cwd }),
+    (error) => {
+      assert.match(error.stderr, new RegExp(`Invalid queue state .*queue\\.json: profiles\\[0\\] must be an object`));
+      assert.doesNotMatch(error.stderr, /TypeError|Cannot read properties/);
+      return true;
+    }
+  );
+  assert.equal(await readFile(statePath, 'utf8'), raw);
+});
+
 test('parallel CLI processes enqueue without errors, duplicate IDs, or lost jobs', async () => {
   const cwd = await mkdtemp(path.join(tmpdir(), 'crawldeck-concurrent-'));
   const fixturePath = path.resolve('fixtures/sample-site');
