@@ -13,6 +13,8 @@ format and uses semantic versioning when versioned releases are published.
 
 ### Fixed
 
+- Persisted queue state now receives schema validation before use, with stable
+  field diagnostics that leave malformed files unchanged.
 - Example local session now uses the generated `<profile>-NNN-job-NNN` job id
   and shows the real CLI transcript.
 - `SKILL.md` instructions for agent-safe CrawlDeck use.
