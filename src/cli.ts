@@ -18,7 +18,7 @@ Usage:
   crawldeck inspect <profile>
   crawldeck job enqueue <profile>
   crawldeck job list
-  crawldeck job next
+  crawldeck job next [--json]
   crawldeck job status <job-id>
   crawldeck job start <job-id>
   crawldeck job pause <job-id>

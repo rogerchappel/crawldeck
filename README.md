@@ -61,7 +61,7 @@ crawldeck profile list
 crawldeck inspect <profile>
 crawldeck job enqueue <profile>
 crawldeck job list
-crawldeck job next
+crawldeck job next [--json]
 crawldeck job status <job-id>
 crawldeck job start <job-id>
 crawldeck job pause <job-id>
@@ -88,6 +88,8 @@ Global options may appear before or after a command. Use `--deck-dir <dir>` to
 put the queue somewhere else. Use `--json` to request structured JSON from any
 command that returns profiles, jobs, inspected items, health, or reports;
 state-mutating job commands return the updated job object.
+`job next --json` returns the next queued job object, or JSON `null` when the
+queue has no queued job. Without `--json`, an empty queue prints `No queued jobs`.
 State-mutating commands take an ownership-checked local lock, so concurrent
 writers are serialized and each mutation is applied to the latest persisted
 state without dropping another process's update. Interrupted owners are
