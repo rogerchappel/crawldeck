@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { createProfile, enqueueJob, loadState, nextQueuedJob } from '../dist/index.js';
+import { acquireStateLock, createProfile, enqueueJob, loadState, nextQueuedJob } from '../dist/index.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -98,7 +98,7 @@ test('CLI reports malformed state without incidental JavaScript diagnostics', as
   assert.equal(await readFile(statePath, 'utf8'), raw);
 });
 
-test('parallel CLI processes enqueue without errors, duplicate IDs, or lost jobs', async () => {
+async function runParallelEnqueue() {
   const cwd = await mkdtemp(path.join(tmpdir(), 'crawldeck-concurrent-'));
   const fixturePath = path.resolve('fixtures/sample-site');
   const profile = await createProfile({ name: 'sample', fixturePath }, cwd);
@@ -120,4 +120,51 @@ test('parallel CLI processes enqueue without errors, duplicate IDs, or lost jobs
   assert.equal(new Set(emittedIds).size, processCount);
   assert.equal(state.jobs.length, processCount);
   assert.deepEqual(new Set(persistedIds), new Set(emittedIds));
+  return { emittedIds, persistedIds };
+}
+
+test('parallel CLI processes repeatedly enqueue without errors, duplicate IDs, or lost jobs', async () => {
+  for (let run = 0; run < 5; run += 1) {
+    const { emittedIds, persistedIds } = await runParallelEnqueue();
+    assert.equal(new Set(emittedIds).size, 20);
+    assert.equal(new Set(persistedIds).size, 20);
+  }
+});
+
+test('lock release preserves a replacement owner after an ABA path change', async () => {
+  const cwd = await mkdtemp(path.join(tmpdir(), 'crawldeck-lock-aba-'));
+  const lockPath = path.join(cwd, '.crawldeck', 'queue.json.lock');
+  const release = await acquireStateLock(cwd);
+
+  await rm(lockPath, { recursive: true });
+  await mkdir(lockPath);
+  const replacement = { pid: process.pid, token: 'replacement-owner' };
+  await writeFile(path.join(lockPath, 'owner.json'), JSON.stringify(replacement));
+
+  await release();
+  assert.deepEqual(JSON.parse(await readFile(path.join(lockPath, 'owner.json'), 'utf8')), replacement);
+});
+
+test('lock acquisition retries owner metadata removal races', async () => {
+  const cwd = await mkdtemp(path.join(tmpdir(), 'crawldeck-lock-owner-race-'));
+  const lockPath = path.join(cwd, '.crawldeck', 'queue.json.lock');
+  await mkdir(lockPath, { recursive: true });
+
+  const acquisition = acquireStateLock(cwd);
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  await rm(lockPath, { recursive: true });
+  const release = await acquisition;
+  await release();
+});
+
+test('lock acquisition recovers a stale owner and removes only that owner', async () => {
+  const cwd = await mkdtemp(path.join(tmpdir(), 'crawldeck-lock-stale-'));
+  const lockPath = path.join(cwd, '.crawldeck', 'queue.json.lock');
+  await mkdir(lockPath, { recursive: true });
+  await writeFile(path.join(lockPath, 'owner.json'), JSON.stringify({ pid: 2_147_483_647, token: 'stale-owner' }));
+
+  const release = await acquireStateLock(cwd);
+  const owner = JSON.parse(await readFile(path.join(lockPath, 'owner.json'), 'utf8'));
+  assert.notEqual(owner.token, 'stale-owner');
+  await release();
 });

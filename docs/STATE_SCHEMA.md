@@ -44,6 +44,13 @@ in `errors`. Invalid JSON or an incompatible field produces an error naming
 truncate, or otherwise rewrite a queue that fails validation; correct or
 restore that file before running another state-mutating command.
 
+State mutations are serialized with a process-owned lock. Each writer reloads
+the queue after acquiring the lock and atomically replaces `queue.json`, so
+concurrent commands preserve every completed mutation. Lock metadata is
+published with acquisition, and stale-lock recovery and release verify the
+owner token before removing anything; a process cannot remove a replacement
+lock acquired under the same path.
+
 ## Job status transitions
 
 The CLI and library enforce the same transition policy:

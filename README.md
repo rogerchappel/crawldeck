@@ -88,6 +88,10 @@ Global options may appear before or after a command. Use `--deck-dir <dir>` to
 put the queue somewhere else. Use `--json` to request structured JSON from any
 command that returns profiles, jobs, inspected items, health, or reports;
 state-mutating job commands return the updated job object.
+State-mutating commands take an ownership-checked local lock, so concurrent
+writers are serialized and each mutation is applied to the latest persisted
+state without dropping another process's update. Interrupted owners are
+recovered without allowing an older process to remove a replacement lock.
 Existing queues are validated against the version 1 state schema before use.
 Malformed or unsupported state is rejected with the queue path and invalid
 field, and the file is left unchanged. See

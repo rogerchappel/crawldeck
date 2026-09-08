@@ -83,50 +83,87 @@ function validateState(value: unknown): DeckState {
 const LOCK_RETRY_MS = 10;
 const LOCK_TIMEOUT_MS = 15_000;
 
-async function acquireStateLock(cwd: string, deckDir?: string): Promise<() => Promise<void>> {
+interface LockOwner {
+  pid: number;
+  token: string;
+}
+
+function isLockOwner(value: unknown): value is LockOwner {
+  return isObject(value) && typeof value.pid === 'number' && typeof value.token === 'string';
+}
+
+async function readLockOwner(lockPath: string): Promise<LockOwner | undefined> {
+  try {
+    const owner: unknown = JSON.parse(await readFile(path.join(lockPath, 'owner.json'), 'utf8'));
+    return isLockOwner(owner) ? owner : undefined;
+  } catch (error) {
+    if (error instanceof SyntaxError || (error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
+async function restoreQuarantinedLock(quarantinePath: string, lockPath: string): Promise<void> {
+  try {
+    await rename(quarantinePath, lockPath);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'EEXIST' && code !== 'ENOTEMPTY') throw error;
+    // Another owner acquired the canonical path while it was quarantined. Keep
+    // the displaced owner intact instead of deleting a lock we do not own.
+  }
+}
+
+async function removeOwnedLock(lockPath: string, expected: LockOwner): Promise<boolean> {
+  const quarantinePath = `${lockPath}.quarantine-${process.pid}-${randomUUID()}`;
+  try {
+    await rename(lockPath, quarantinePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
+  }
+
+  const actual = await readLockOwner(quarantinePath);
+  if (actual?.pid !== expected.pid || actual.token !== expected.token) {
+    await restoreQuarantinedLock(quarantinePath, lockPath);
+    return false;
+  }
+  await rm(quarantinePath, { recursive: true, force: true });
+  return true;
+}
+
+export async function acquireStateLock(cwd: string, deckDir?: string): Promise<() => Promise<void>> {
   await ensureDeckDir(cwd, deckDir);
   const lockPath = `${resolveStatePath(cwd, deckDir)}.lock`;
   const startedAt = Date.now();
 
   while (true) {
+    const owner: LockOwner = { pid: process.pid, token: randomUUID() };
+    const candidatePath = `${lockPath}.candidate-${owner.pid}-${owner.token}`;
     try {
-      await mkdir(lockPath);
+      await mkdir(candidatePath);
       try {
-        await writeFile(path.join(lockPath, 'owner.json'), JSON.stringify({ pid: process.pid }), 'utf8');
+        await writeFile(path.join(candidatePath, 'owner.json'), JSON.stringify(owner), 'utf8');
+        await rename(candidatePath, lockPath);
       } catch (error) {
-        await rm(lockPath, { recursive: true, force: true });
+        await rm(candidatePath, { recursive: true, force: true });
         throw error;
       }
       return async () => {
-        await rm(lockPath, { recursive: true, force: true });
+        await removeOwnedLock(lockPath, owner);
       };
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== 'EEXIST' && code !== 'ENOTEMPTY') throw error;
 
-      try {
-        const owner = JSON.parse(await readFile(path.join(lockPath, 'owner.json'), 'utf8')) as { pid?: number };
-        if (typeof owner.pid === 'number') {
-          try {
-            process.kill(owner.pid, 0);
-          } catch (ownerError) {
-            if ((ownerError as NodeJS.ErrnoException).code === 'ESRCH') {
-              const stalePath = `${lockPath}.stale-${process.pid}-${randomUUID()}`;
-              try {
-                await rename(lockPath, stalePath);
-              } catch (renameError) {
-                if ((renameError as NodeJS.ErrnoException).code === 'ENOENT') continue;
-                throw renameError;
-              }
-              await rm(stalePath, { recursive: true, force: true });
-              continue;
-            }
+      const currentOwner = await readLockOwner(lockPath);
+      if (currentOwner) {
+        try {
+          process.kill(currentOwner.pid, 0);
+        } catch (ownerError) {
+          if ((ownerError as NodeJS.ErrnoException).code === 'ESRCH') {
+            await removeOwnedLock(lockPath, currentOwner);
+            continue;
           }
-        }
-      } catch (ownerError) {
-        if (ownerError instanceof SyntaxError || (ownerError as NodeJS.ErrnoException).code === 'ENOENT') {
-          // The lock owner may still be writing its metadata; retry normally.
-        } else {
-          throw ownerError;
         }
       }
 
