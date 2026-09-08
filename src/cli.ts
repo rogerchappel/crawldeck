@@ -171,7 +171,9 @@ async function main(argv = process.argv.slice(2)): Promise<void> {
 
   if (command === 'job' && args[1] === 'next') {
     const job = await nextQueuedJob(process.cwd(), parsed.deckDir);
-    console.log(job ? (parsed.json ? JSON.stringify(job, null, 2) : `${job.id} ${job.profileId} ${job.status}`) : 'No queued jobs');
+    console.log(parsed.json
+      ? JSON.stringify(job ?? null, null, 2)
+      : job ? `${job.id} ${job.profileId} ${job.status}` : 'No queued jobs');
     return;
   }
 
