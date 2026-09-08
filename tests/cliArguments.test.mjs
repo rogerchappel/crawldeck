@@ -49,3 +49,26 @@ test('profile add accepts its documented option grammar', async () => {
   const result = await run(['profile', 'add', 'sample', '--fixture', path.resolve('fixtures/sample-site'), '--json'], cwd);
   assert.equal(JSON.parse(result.stdout).name, 'sample');
 });
+
+test('job next emits parseable JSON for empty and populated queues', async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), 'crawldeck-cli-next-json-'));
+  await run(['init'], cwd);
+
+  const empty = await run(['job', 'next', '--json'], cwd);
+  assert.equal(JSON.parse(empty.stdout), null);
+
+  const profile = JSON.parse((await run([
+    'profile', 'add', 'sample', '--fixture', path.resolve('fixtures/sample-site'), '--json'
+  ], cwd)).stdout);
+  const queued = JSON.parse((await run(['job', 'enqueue', profile.id, '--json'], cwd)).stdout);
+  const next = JSON.parse((await run(['job', 'next', '--json'], cwd)).stdout);
+  assert.deepEqual(next, queued);
+});
+
+test('job next retains its human-readable empty-queue output', async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), 'crawldeck-cli-next-text-'));
+  await run(['init'], cwd);
+
+  const result = await run(['job', 'next'], cwd);
+  assert.equal(result.stdout, 'No queued jobs\n');
+});
