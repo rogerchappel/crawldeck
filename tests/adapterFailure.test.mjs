@@ -30,3 +30,24 @@ test('adapter run exceptions are persisted on the failed job', async () => {
   assert.deepEqual(state.jobs[0].errors, ['adapter boom']);
   assert.equal(state.jobs[0].lastEvent, 'failed: adapter boom');
 });
+
+test('unknown adapter lookup is persisted on the failed job', async () => {
+  const cwd = await mkdtemp(path.join(tmpdir(), 'crawldeck-unknown-adapter-'));
+  const profile = await createProfile({
+    name: 'unknown',
+    adapter: 'unsupported-fixture',
+    fixturePath: '.',
+    outputDir: 'out'
+  }, cwd);
+  const queued = await enqueueJob(profile.id, cwd);
+
+  const failed = await startJob(queued.id, cwd);
+  assert.equal(failed.status, 'failed');
+  assert.match(failed.errors[0], /Unknown crawler adapter 'unsupported-fixture'/);
+  assert.match(failed.lastEvent, /^failed: Unknown crawler adapter/);
+
+  const state = await loadState(cwd);
+  assert.equal(state.jobs[0].status, 'failed');
+  assert.deepEqual(state.jobs[0].errors, failed.errors);
+  assert.equal(state.jobs[0].lastEvent, failed.lastEvent);
+});
