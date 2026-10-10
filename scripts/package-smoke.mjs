@@ -23,6 +23,10 @@ if (packageJson.main) {
   requiredFiles.add(packageJson.main.replace(/^\.\//, ""));
 }
 
+if (packageJson.types) {
+  requiredFiles.add(packageJson.types.replace(/^\.\//, ""));
+}
+
 const binEntries =
   typeof packageJson.bin === "string"
     ? [packageJson.bin]
